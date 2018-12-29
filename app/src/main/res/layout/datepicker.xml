@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.design.widget.TextInputLayout
+        android:id="@+id/datetime_layout"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+    <android.support.design.widget.TextInputEditText
+            android:id="@+id/datetime"
+            android:inputType="date"
+            android:focusableInTouchMode="false"
+            android:fontFamily="@font/montserrat_regular"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+</android.support.design.widget.TextInputLayout>
