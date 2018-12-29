@@ -11,4 +11,8 @@
         <item name="android:fontFamily">@font/montserrat_regular</item>
     </style>
 
+    <style name="ToolBarTextAppearance" parent="TextAppearance.AppCompat">
+        <item name="android:fontFamily">@font/montserrat_medium</item>
+    </style>
+
 </resources>
