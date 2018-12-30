@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">DynamicApp</string>
+    <string name="error_view">No data returned</string>
     <string-array name="yesno">
         <item>Yes</item>
         <item>No</item>
