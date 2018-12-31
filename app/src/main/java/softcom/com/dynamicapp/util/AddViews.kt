@@ -117,7 +117,7 @@ private fun addText(context: Context, element: Element, views: LinearLayout) {
     val layout = TextInputLayout(context)
     val view = TextInputEditText(context)
     if (element.isMandatory)
-        view.hint = ("${element.label}*")
+        view.hint = ("${element.label} *")
     else
         view.hint = element.label
     view.textSize = 14f
