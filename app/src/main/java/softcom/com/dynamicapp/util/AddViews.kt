@@ -4,6 +4,7 @@ import android.app.DatePickerDialog
 import android.content.Context
 import android.support.design.widget.TextInputEditText
 import android.support.design.widget.TextInputLayout
+import android.support.v4.content.ContextCompat
 import android.support.v4.content.res.ResourcesCompat
 import android.text.Editable
 import android.text.InputType
@@ -38,13 +39,13 @@ fun addHeader(context: Context, head: String, views: LinearLayout) {
     val headerView = TextView(context)
     headerView.text = head
     headerView.textSize = 15f
+    headerView.setTextColor(ContextCompat.getColor(context, R.color.colorText))
     headerView.typeface = ResourcesCompat.getFont(context, R.font.montserrat_medium)
     val layoutParams = LinearLayout.LayoutParams(
         LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
     )
     layoutParams.setMargins(
-        convertDp2Px(context, 16f), convertDp2Px(context, 16f),
-        convertDp2Px(context, 16f), convertDp2Px(context, 8f)
+        16, 16, 16, 8
     )
     headerView.layoutParams = layoutParams
     views.addView(headerView)
@@ -60,8 +61,7 @@ fun addButtons(
         LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
     )
     layoutParams.setMargins(
-        convertDp2Px(context, 8f), convertDp2Px(context, 8f),
-        convertDp2Px(context, 8f), convertDp2Px(context, 8f)
+        8, 8, 8, 8
     )
     layoutParams.gravity = Gravity.CENTER_HORIZONTAL
     val prevButton = Button(context)
@@ -69,6 +69,7 @@ fun addButtons(
     prevButton.background = context.getDrawable(R.drawable.button_background)
     prevButton.setOnClickListener(prevListener)
     prevButton.text = ("Back")
+    prevButton.setTextColor(ContextCompat.getColor(context, R.color.colorWhite))
     prevButton.layoutParams = layoutParams
     container.addView(prevButton)
     val button = Button(context)
@@ -79,6 +80,7 @@ fun addButtons(
     } else {
         button.text = ("Next Page")
     }
+    button.setTextColor(ContextCompat.getColor(context, R.color.colorWhite))
     button.setOnClickListener(listener)
     button.layoutParams = layoutParams
     container.addView(button)
@@ -86,8 +88,7 @@ fun addButtons(
         LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
     )
     parentParams.setMargins(
-        convertDp2Px(context, 16f), convertDp2Px(context, 24f),
-        convertDp2Px(context, 16f), convertDp2Px(context, 16f)
+        16, 24, 16, 32
     )
     parentParams.gravity = Gravity.CENTER_HORIZONTAL
     container.layoutParams = parentParams
@@ -101,8 +102,7 @@ private fun addImage(context: Context, url: String, id: String, view: LinearLayo
     )
     layoutParams.gravity = Gravity.CENTER_HORIZONTAL
     layoutParams.setMargins(
-        convertDp2Px(context, 16f), convertDp2Px(context, 8f),
-        convertDp2Px(context, 16f), convertDp2Px(context, 8f)
+        16, 8, 16, 8
     )
     imageView.layoutParams = layoutParams
     Picasso.get()
@@ -116,8 +116,16 @@ private fun addImage(context: Context, url: String, id: String, view: LinearLayo
 private fun addText(context: Context, element: Element, views: LinearLayout) {
     val layout = TextInputLayout(context)
     val view = TextInputEditText(context)
-    view.hint = element.label
-    view.textSize = 13f
+    if (element.isMandatory)
+        view.hint = ("${element.label}*")
+    else
+        view.hint = element.label
+    view.textSize = 14f
+    if (element.value.isNotEmpty()) {
+        view.setText(element.value)
+    }
+    view.setTextColor(ContextCompat.getColor(context, R.color.colorText))
+    view.setHintTextColor(ContextCompat.getColor(context, R.color.colorTextSecondary))
     layout.tag = element.unique_id
     when (element.type) {
         "datetime" -> {
@@ -149,26 +157,41 @@ private fun addText(context: Context, element: Element, views: LinearLayout) {
         LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
     )
     layoutParams.setMargins(
-        convertDp2Px(context, 16f), convertDp2Px(context, 8f),
-        convertDp2Px(context, 16f), convertDp2Px(context, 8f)
+        16, 12, 16, 12
     )
     layout.layoutParams = layoutParams
     views.addView(layout)
 }
 
 private fun addYesNo(context: Context, element: Element, views: LinearLayout) {
+    val text = TextView(context)
+    text.text = (element.label)
+    text.tag = element.unique_id
+    val tLayoutParams = LinearLayout.LayoutParams(
+        LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+    )
+    tLayoutParams.setMargins(
+        16, 8, 16, 4
+    )
+    text.layoutParams = tLayoutParams
+    views.addView(text)
     val spinner = Spinner(context)
     val options = arrayOf("Yes", "No")
     val adapter = ArrayAdapter(context, android.R.layout.simple_spinner_dropdown_item, options)
     adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
     spinner.adapter = adapter
-    spinner.setSelection(1)
+    if (element.value.isNotEmpty() && element.value.equals("Yes", true))
+        spinner.setSelection(0)
+    else
+        spinner.setSelection(1)
+    spinner.tag = element.unique_id
     spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
         override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
             if (view != null) {
                 if (element.rules.isNotEmpty()) {
                     for (rule in element.rules) {
                         if (rule.condition == "equals") {
+                            element.value = parent.getItemAtPosition(position).toString()
                             if (parent.getItemAtPosition(position).toString() == rule.value) {
                                 when (rule.action) {
                                     "show" -> {
@@ -218,8 +241,7 @@ private fun addYesNo(context: Context, element: Element, views: LinearLayout) {
         LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
     )
     layoutParams.setMargins(
-        convertDp2Px(context, 16f), convertDp2Px(context, 8f),
-        convertDp2Px(context, 16f), convertDp2Px(context, 8f)
+        16, 4, 16, 8
     )
     spinner.layoutParams = layoutParams
     views.addView(spinner)
@@ -229,6 +251,9 @@ private fun setTextWatcher(element: Element): TextWatcher {
     return object : TextWatcher {
         override fun afterTextChanged(s: Editable?) {
             element.value = s.toString()
+            /*if (element.formattedNumeric.isNotEmpty()) {
+                formatNumber(element.formattedNumeric, s.toString().toInt())
+            }*/
         }
 
         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {

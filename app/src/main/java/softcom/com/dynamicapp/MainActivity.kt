@@ -1,10 +1,13 @@
 package softcom.com.dynamicapp
 
+import android.app.Activity
 import android.os.Bundle
 import android.support.design.widget.TextInputLayout
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
+import android.util.Patterns
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import com.google.gson.Gson
 import kotlinx.android.synthetic.main.main_activity.*
 import softcom.com.dynamicapp.data.Data
@@ -13,6 +16,7 @@ import softcom.com.dynamicapp.data.Section
 import softcom.com.dynamicapp.util.addButtons
 import softcom.com.dynamicapp.util.addHeader
 import softcom.com.dynamicapp.util.addViews
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -56,10 +60,14 @@ class MainActivity : AppCompatActivity() {
         data = gson.fromJson(json, Data::class.java)
         if (data.pages.isNotEmpty()) {
             errorView.visibility = View.GONE
+            pageCount.visibility = View.VISIBLE
+            content.visibility = View.VISIBLE
             updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size-1)
             Log.e(TAG, data.toString())
         } else {
             errorView.visibility = View.VISIBLE
+            pageCount.visibility = View.GONE
+            content.visibility = View.GONE
         }
     }
 
@@ -91,28 +99,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onNextClicked(sections: List<Section>) {
-        var checker = false
-        for (section in sections) {
-            for (element in section.elements) {
-                for (i in 0 until content.childCount) {
-                    val view = content.getChildAt(i)
-                    if (view.tag == element.unique_id && element.isMandatory) {
-                        if (view is TextInputLayout) {
-                            if (element.value.isEmpty()) {
-                                view.isErrorEnabled = true
-                                view.error = ("This field is mandatory")
-                                view.editText?.requestFocus()
-                                checker = true
-                            } else {
-                                view.error = null
-                                view.isErrorEnabled = false
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        if (pageNumber < data.pages.size && !checker) {
+        if (pageNumber < data.pages.size && !validateData(sections)) {
             pageNumber += 1
             if (pageNumber > data.pages.size - 1) {
                 pageNumber = data.pages.size - 1
@@ -133,11 +120,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun onCompleteClicked(sections: List<Section>) {
+    private fun hideKeyboard() {
+        val imm = getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
+        var view = currentFocus
+        if (view == null) {
+            view = View(this)
+        }
+        imm.hideSoftInputFromWindow(view.windowToken, 0)
+        view.clearFocus()
+    }
+
+    private fun validateData(sections: List<Section>): Boolean {
         var checker = false
         for (section in sections) {
             for (element in section.elements) {
-
                 for (i in 0 until content.childCount) {
                     val view = content.getChildAt(i)
                     if (view.tag == element.unique_id && element.isMandatory) {
@@ -148,20 +144,36 @@ class MainActivity : AppCompatActivity() {
                                 view.editText?.requestFocus()
                                 checker = true
                             } else {
-                                view.error = null
-                                view.isErrorEnabled = false
+                                if (element.label.equals("Email Address", true)) {
+                                    if(!Patterns.EMAIL_ADDRESS.matcher(element.value).matches()) {
+                                        view.isErrorEnabled = true
+                                        view.error = ("Invalid email address")
+                                        view.editText?.requestFocus()
+                                        checker = true
+                                    } else {
+                                        view.error = null
+                                        view.isErrorEnabled = false
+                                    }
+                                } else {
+                                    view.error = null
+                                    view.isErrorEnabled = false
+                                }
                             }
                         }
                     }
                 }
             }
         }
+        return checker
+    }
 
-        if (!checker) {
+    private fun onCompleteClicked(sections: List<Section>) {
+        if (!validateData(sections)) {
             errorView.text = ("${data.name} completed successfully")
             pageNumber = 0
             page = data.pages[pageNumber]
             content.visibility = View.GONE
+            hideKeyboard()
             pageCount.visibility = View.GONE
             errorView.visibility = View.VISIBLE
             restart.visibility = View.VISIBLE
