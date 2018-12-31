@@ -1,40 +1,23 @@
 package softcom.com.dynamicapp
 
-import android.app.DatePickerDialog
-import android.graphics.drawable.Drawable
-import android.os.Build
 import android.os.Bundle
-import android.support.annotation.RequiresApi
-import android.support.design.widget.TextInputEditText
 import android.support.design.widget.TextInputLayout
-import android.support.v4.content.res.ResourcesCompat
 import android.support.v7.app.AppCompatActivity
-import android.text.Editable
-import android.text.InputType
-import android.text.TextWatcher
 import android.util.Log
-import android.view.Gravity
 import android.view.View
-import android.widget.*
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.target.Target
 import com.google.gson.Gson
 import kotlinx.android.synthetic.main.main_activity.*
 import softcom.com.dynamicapp.data.Data
-import softcom.com.dynamicapp.data.Element
 import softcom.com.dynamicapp.data.Page
-import softcom.com.dynamicapp.util.GlideApp
-import softcom.com.dynamicapp.util.convertDp2Px
-import softcom.com.dynamicapp.util.formatNumber
-import java.text.SimpleDateFormat
-import java.util.*
+import softcom.com.dynamicapp.data.Section
+import softcom.com.dynamicapp.util.addButtons
+import softcom.com.dynamicapp.util.addHeader
+import softcom.com.dynamicapp.util.addViews
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var data: Data
-    private var pageNumber: Int = 1
+    private var pageNumber: Int = 0
     private var name: String = ""
     private var page: Page = Page()
     private var last: Boolean = false
@@ -47,12 +30,20 @@ class MainActivity : AppCompatActivity() {
             onRestoreInstanceState(savedInstanceState)
             updateContent(name, page, last)
         }
+        restart.setOnClickListener {
+            invalidateData()
+            updateContent(data.name, data.pages[0], false)
+            restart.visibility = View.GONE
+            errorView.visibility = View.GONE
+            pageCount.visibility = View.VISIBLE
+            content.visibility = View.VISIBLE
+        }
     }
 
     private fun loadJSONFromAsset(): String {
         return try {
-            val  inputStream = resources.openRawResource(R.raw.pet_adoption)
-            inputStream.bufferedReader().use{it.readText()}
+            val inputStream = resources.openRawResource(R.raw.pet_adoption)
+            inputStream.bufferedReader().use { it.readText() }
         } catch (ex: Exception) {
             ex.printStackTrace()
             ""
@@ -65,7 +56,7 @@ class MainActivity : AppCompatActivity() {
         data = gson.fromJson(json, Data::class.java)
         if (data.pages.isNotEmpty()) {
             errorView.visibility = View.GONE
-            updateContent(data.name, data.pages[0], pageNumber == data.pages.size)
+            updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size-1)
             Log.e(TAG, data.toString())
         } else {
             errorView.visibility = View.VISIBLE
@@ -73,6 +64,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateContent(name: String, page: Page, last: Boolean) {
+        pageCount.text = String.format(getString(R.string.page_count), pageNumber+1, data.pages.size)
         this.page = page
         this.name = name
         this.last = last
@@ -80,251 +72,115 @@ class MainActivity : AppCompatActivity() {
         content?.removeAllViews()
         this.last = last
         for (section in page.sections) {
-            addHeader(section.label)
-            for (element in section.elements) {
-                when (element.type) {
-                    "embeddedphoto" -> {
-                        addImage(element.file, element.unique_id)
-                    }
-                    "yesno" -> {
-                        addYesNo(element)
-                    }
-                    else -> {
-                        addText(element)
-                    }
-                }
-            }
+            addHeader(this@MainActivity, section.label, content)
+            addViews(this@MainActivity, section, content)
         }
         if (last) {
-            addButton(last = true)
+            addButtons(this@MainActivity, true, content, View.OnClickListener {
+                onPrevClicked()
+            }, View.OnClickListener {
+                onCompleteClicked(page.sections)
+            })
         } else {
-            addButton(last = false)
+            addButtons(this@MainActivity, false, content, View.OnClickListener {
+                onPrevClicked()
+            }, View.OnClickListener {
+                onNextClicked(page.sections)
+            })
         }
     }
 
-    private fun addHeader(head: String) {
-        val headerView = TextView(this@MainActivity)
-        headerView.text = head
-        headerView.textSize = 15f
-        headerView.typeface = ResourcesCompat.getFont(this@MainActivity, R.font.montserrat_medium)
-        val layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        layoutParams.setMargins(16, 16, 16, 8)
-        headerView.layoutParams = layoutParams
-        content?.addView(headerView)
-    }
-
-    private fun addImage(url: String, id: String) {
-        val imageView = ImageView(this@MainActivity)
-        val layoutParams = LinearLayout.LayoutParams(
-            convertDp2Px(this@MainActivity, 96F), convertDp2Px(this@MainActivity, 96F)
-        )
-        layoutParams.gravity = Gravity.CENTER_HORIZONTAL
-        layoutParams.setMargins(16, 8, 16, 8)
-        imageView.layoutParams = layoutParams
-        GlideApp.with(this@MainActivity)
-            .load(url)
-            .listener(object : RequestListener<Drawable> {
-                override fun onLoadFailed(
-                    e: GlideException?,
-                    model: Any?,
-                    target: Target<Drawable>?,
-                    isFirstResource: Boolean
-                ): Boolean {
-                    Log.e(TAG, "loading image failed: $e")
-                    return false
-                }
-
-                override fun onResourceReady(
-                    resource: Drawable?,
-                    model: Any?,
-                    target: Target<Drawable>?,
-                    dataSource: DataSource?,
-                    isFirstResource: Boolean
-                ): Boolean {
-                    imageView.setImageDrawable(resource)
-                    Log.e(TAG, "image loaded from $dataSource")
-                    return true
-                }
-
-            }).into(imageView)
-        imageView.tag = id
-        content?.addView(imageView)
-
-    }
-
-    private fun addText(element: Element) {
-        val layout = TextInputLayout(this@MainActivity)
-        val view = TextInputEditText(this@MainActivity)
-        view.hint = element.label
-        view.textSize = 13f
-        layout.tag = element.unique_id
-        when (element.type) {
-            "formattednumeric" -> {
-                when (element.keyboard) {
-                    "numeric" -> {
-                        view.inputType = InputType.TYPE_CLASS_NUMBER
-                        view.addTextChangedListener(object : TextWatcher {
-                            @RequiresApi(Build.VERSION_CODES.N)
-                            override fun afterTextChanged(s: Editable?) {
-                                formatNumber(element.formattedNumeric, s.toString().toInt())
-                            }
-
-                            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
-
-                            }
-
-                            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-
-                            }
-
-                        })
-                    }
-                }
-            }
-            "datetime" -> {
-                view.inputType = InputType.TYPE_CLASS_DATETIME
-                view.isFocusable = false
-                view.isClickable = true
-                view.setOnClickListener {
-                    pickDate(view)
-                }
-            }
-        }
-        val childParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT
-        )
-        view.layoutParams = childParams
-        layout.addView(view)
-        val layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        layoutParams.setMargins(16, 8, 16, 8)
-        layout.layoutParams = layoutParams
-        content?.addView(layout)
-    }
-
-    private fun addYesNo(element: Element) {
-        val spinner = Spinner(this@MainActivity)
-        val options = arrayOf("Yes", "No")
-        val adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_item, options)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        spinner.adapter = adapter
-        spinner.setSelection(1)
-        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                if (view != null) {
-                    if (element.rules.isNotEmpty()) {
-                        for (rule in element.rules) {
-                            if (rule.condition == "equals") {
-                                if (parent.getItemAtPosition(position).toString() == rule.value) {
-                                    when (rule.action) {
-                                        "show" -> {
-                                            for (i in 0 until content.childCount) {
-                                                val v = content.getChildAt(i)
-                                                if (rule.targets.contains(v.tag))
-                                                    v.visibility = View.VISIBLE
-                                            }
-                                        }
-                                        "hide" -> {
-                                            for (i in 0 until content.childCount) {
-                                                val v = content.getChildAt(i)
-                                                if (rule.targets.contains(v.tag))
-                                                    v.visibility = View.GONE
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    when (rule.otherwise) {
-                                        "show" -> {
-                                            for (i in 0 until content.childCount) {
-                                                val v = content.getChildAt(i)
-                                                if (rule.targets.contains(v.tag))
-                                                    v.visibility = View.VISIBLE
-                                            }
-                                        }
-                                        "hide" -> {
-                                            for (i in 0 until content.childCount) {
-                                                val v = content.getChildAt(i)
-                                                if (rule.targets.contains(v.tag))
-                                                    v.visibility = View.GONE
-                                            }
-                                        }
-                                    }
-                                }
+    private fun onNextClicked(sections: List<Section>) {
+        var checker = false
+        for (section in sections) {
+            for (element in section.elements) {
+                for (i in 0 until content.childCount) {
+                    val view = content.getChildAt(i)
+                    if (view.tag == element.unique_id && element.isMandatory) {
+                        if (view is TextInputLayout) {
+                            if (element.value.isEmpty()) {
+                                view.isErrorEnabled = true
+                                view.error = ("This field is mandatory")
+                                view.editText?.requestFocus()
+                                checker = true
+                            } else {
+                                view.error = null
+                                view.isErrorEnabled = false
                             }
                         }
                     }
                 }
             }
+        }
+        if (pageNumber < data.pages.size && !checker) {
+            pageNumber += 1
+            if (pageNumber > data.pages.size - 1) {
+                pageNumber = data.pages.size - 1
+            }
+            updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size-1)
+        }
+    }
 
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-
+    private fun onPrevClicked() {
+        if (pageNumber > 0 && (data.pages.indexOf(page) != 0)) {
+            pageNumber -= 1
+            if (pageNumber >= 0)
+                updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size-1)
+            else {
+                pageNumber = 0
+                updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size-1)
             }
         }
-        val layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        layoutParams.setMargins(16, 8, 16, 8)
-        spinner.layoutParams = layoutParams
-        content?.addView(spinner)
     }
 
-    private fun addButton(last: Boolean) {
-        val button = Button(this@MainActivity)
-        button.isAllCaps = false
-        button.background = getDrawable(R.drawable.button_background)
-        if (last) {
-            button.text = ("Submit")
-            button.setOnClickListener {
-                onCompleteClicked()
+    private fun onCompleteClicked(sections: List<Section>) {
+        var checker = false
+        for (section in sections) {
+            for (element in section.elements) {
+
+                for (i in 0 until content.childCount) {
+                    val view = content.getChildAt(i)
+                    if (view.tag == element.unique_id && element.isMandatory) {
+                        if (view is TextInputLayout) {
+                            if (element.value.isEmpty()) {
+                                view.isErrorEnabled = true
+                                view.error = ("This field is mandatory")
+                                view.editText?.requestFocus()
+                                checker = true
+                            } else {
+                                view.error = null
+                                view.isErrorEnabled = false
+                            }
+                        }
+                    }
+                }
             }
-        } else {
-            button.text = ("Next Page")
-            button.setOnClickListener {
-                onNextClicked()
+        }
+
+        if (!checker) {
+            errorView.text = ("${data.name} completed successfully")
+            pageNumber = 0
+            page = data.pages[pageNumber]
+            content.visibility = View.GONE
+            pageCount.visibility = View.GONE
+            errorView.visibility = View.VISIBLE
+            restart.visibility = View.VISIBLE
+        }
+    }
+
+    private fun invalidateData() {
+        for (page in data.pages) {
+            for (section in page.sections) {
+                for (element in section.elements) {
+                    element.value = ""
+                }
             }
         }
-
-        val layoutParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        )
-        layoutParams.setMargins(16, 20, 16, 8)
-        layoutParams.gravity = Gravity.CENTER_HORIZONTAL
-        button.layoutParams = layoutParams
-        content?.addView(button)
-    }
-
-    private fun pickDate(view: View) {
-        val calendar = Calendar.getInstance()
-        val datePickerListener = DatePickerDialog.OnDateSetListener { _, year, monthOfYear, dayOfMonth ->
-            calendar.set(Calendar.YEAR, year)
-            calendar.set(Calendar.MONTH, monthOfYear)
-            calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
-
-            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            (view as TextInputEditText).setText(sdf.format(calendar.time))
-        }
-        DatePickerDialog(
-            this@MainActivity, datePickerListener, calendar
-                .get(Calendar.YEAR), calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        ).show()
-    }
-
-    private fun onNextClicked() {
-        if (pageNumber < data.pages.size) {
-            updateContent(data.name, data.pages[pageNumber++], pageNumber == data.pages.size)
-        }
-    }
-
-    private fun onCompleteClicked() {
-
     }
 
     override fun onSaveInstanceState(outState: Bundle?) {
         super.onSaveInstanceState(outState)
+        outState?.putParcelable("data", data)
         outState?.putString("name", name)
         outState?.putParcelable("page", page)
         outState?.putBoolean("last", last)
@@ -332,7 +188,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle?) {
         super.onRestoreInstanceState(savedInstanceState)
-        this.name = savedInstanceState?.getString("name")!!
+        this.data = savedInstanceState?.getParcelable("data")!!
+        this.name = savedInstanceState.getString("name")!!
         this.page = savedInstanceState.getParcelable("page")!!
         this.last = savedInstanceState.getBoolean("last")
     }
