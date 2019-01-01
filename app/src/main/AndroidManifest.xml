@@ -15,7 +15,7 @@
             android:theme="@style/AppTheme"
             tools:ignore="AllowBackup,UnusedAttribute">
         <activity
-                android:name=".MainActivity"
+                android:name=".views.MainActivity"
                 android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
@@ -24,7 +24,7 @@
             </intent-filter>
         </activity>
         <activity
-                android:name=".SplashActivity"
+                android:name=".views.SplashActivity"
                 android:theme="@style/AppTheme.Splash">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

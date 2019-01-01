@@ -1,4 +1,4 @@
-package softcom.com.dynamicapp
+package softcom.com.dynamicapp.views
 
 import android.app.Activity
 import android.os.Bundle
@@ -10,6 +10,7 @@ import android.view.View
 import android.view.inputmethod.InputMethodManager
 import com.google.gson.Gson
 import kotlinx.android.synthetic.main.main_activity.*
+import softcom.com.dynamicapp.R
 import softcom.com.dynamicapp.data.Data
 import softcom.com.dynamicapp.data.Page
 import softcom.com.dynamicapp.data.Section

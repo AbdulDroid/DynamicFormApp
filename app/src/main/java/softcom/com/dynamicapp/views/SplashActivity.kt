@@ -1,4 +1,4 @@
-package softcom.com.dynamicapp
+package softcom.com.dynamicapp.views
 
 import android.content.Intent
 import android.os.Bundle
