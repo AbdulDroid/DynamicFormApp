@@ -58,14 +58,22 @@ class MainActivity : AppCompatActivity() {
 
     private fun getDataAndShow(json: String) {
         val gson = Gson()
-        data = gson.fromJson(json, Data::class.java)
-        if (data.pages.isNotEmpty()) {
-            errorView.visibility = View.GONE
-            pageCount.visibility = View.VISIBLE
-            content.visibility = View.VISIBLE
-            updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size - 1)
-            Log.e(TAG, data.toString())
-        } else {
+        try {
+            data = gson.fromJson(json, Data::class.java)
+            if (data.pages.isNotEmpty()) {
+                errorView.visibility = View.GONE
+                pageCount.visibility = View.VISIBLE
+                content.visibility = View.VISIBLE
+                updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size - 1)
+                Log.e(TAG, data.toString())
+            } else {
+                errorView.visibility = View.VISIBLE
+                pageCount.visibility = View.GONE
+                content.visibility = View.GONE
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            errorView.text = ("Invalid data provided, please check and try again")
             errorView.visibility = View.VISIBLE
             pageCount.visibility = View.GONE
             content.visibility = View.GONE
@@ -191,10 +199,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onSaveInstanceState(outState: Bundle?) {
         super.onSaveInstanceState(outState)
-        outState?.putParcelable("data", data)
-        outState?.putString("name", name)
-        outState?.putParcelable("page", page)
-        outState?.putBoolean("last", last)
+        if (::data.isInitialized) {
+            outState?.putParcelable("data", data)
+            outState?.putString("name", name)
+            outState?.putParcelable("page", page)
+            outState?.putBoolean("last", last)
+        }
     }
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle?) {

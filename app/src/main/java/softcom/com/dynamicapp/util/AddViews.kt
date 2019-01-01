@@ -18,6 +18,7 @@ import android.widget.*
 import com.squareup.picasso.Picasso
 import softcom.com.dynamicapp.R
 import softcom.com.dynamicapp.data.Element
+import softcom.com.dynamicapp.data.Rule
 import softcom.com.dynamicapp.data.Section
 import java.text.SimpleDateFormat
 import java.util.*
@@ -27,7 +28,7 @@ fun addViews(context: Context, section: Section, container: LinearLayout) {
     section.elements.forEach {
         when (it.type) {
             "embeddedphoto" -> {
-                addImage(context, it.file, it.unique_id, container)
+                addImage(context, it, container)
             }
             "yesno" -> {
                 addYesNo(context, it, container)
@@ -103,7 +104,7 @@ fun addButtons(
     views.addView(container)
 }
 
-private fun addImage(context: Context, url: String, id: String, view: LinearLayout) {
+private fun addImage(context: Context, element: Element, view: LinearLayout) {
     val imageView = ImageView(context).apply {
         val layoutParams = LinearLayout.LayoutParams(
             convertDp2Px(context, 96F), convertDp2Px(context, 96F)
@@ -114,12 +115,15 @@ private fun addImage(context: Context, url: String, id: String, view: LinearLayo
         )
         this.layoutParams = layoutParams
         Picasso.get()
-            .load(url)
+            .load(element.file)
             .into(this)
-        this.tag = id
+        this.tag = element.unique_id
+
+        //It is unclear how rules will apply to embedded photos elements but
+        if (element.hasRules())
+            applyRules("", element.rules, view)
     }
     view.addView(imageView)
-
 }
 
 private fun addText(context: Context, element: Element, views: LinearLayout) {
@@ -143,9 +147,9 @@ private fun addText(context: Context, element: Element, views: LinearLayout) {
                     isClickable = true
                     setOnClickListener {
                         if (element.mode.equals("date", true))
-                            pickDate(it, element)
+                            pickDate(it, element, views)
                         else if (element.mode.equals("time", true))
-                            pickTime(it, element)
+                            pickTime(it, element, views)
                     }
                 }
                 "text" -> {
@@ -153,12 +157,12 @@ private fun addText(context: Context, element: Element, views: LinearLayout) {
                         InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
                     else
                         InputType.TYPE_TEXT_FLAG_CAP_WORDS
-                    addTextChangedListener(setTextWatcher(element))
+                    addTextChangedListener(setTextWatcher(element, views))
                 }
                 "formattednumeric" -> {
                     keyListener = DigitsKeyListener.getInstance("0123456789-+ ")
 
-                    addTextChangedListener(setTextWatcher(element))
+                    addTextChangedListener(setTextWatcher(element, views))
                 }
             }
         }
@@ -203,47 +207,10 @@ private fun addYesNo(context: Context, element: Element, views: LinearLayout) {
         onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
                 if (view != null) {
-                    if (element.rules.isNotEmpty()) {
-                        element.rules.forEach {
-                            if (it.condition == "equals") {
-                                element.value = parent.getItemAtPosition(position).toString()
-                                if (parent.getItemAtPosition(position).toString() == it.value) {
-                                    when (it.action) {
-                                        "show" -> {
-                                            for (i in 0 until views.childCount) {
-                                                val v = views.getChildAt(i)
-                                                if (it.targets.contains(v.tag))
-                                                    v.visibility = View.VISIBLE
-                                            }
-                                        }
-                                        "hide" -> {
-                                            for (i in 0 until views.childCount) {
-                                                val v = views.getChildAt(i)
-                                                if (it.targets.contains(v.tag))
-                                                    v.visibility = View.GONE
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    when (it.otherwise) {
-                                        "show" -> {
-                                            for (i in 0 until views.childCount) {
-                                                val v = views.getChildAt(i)
-                                                if (it.targets.contains(v.tag))
-                                                    v.visibility = View.VISIBLE
-                                            }
-                                        }
-                                        "hide" -> {
-                                            for (i in 0 until views.childCount) {
-                                                val v = views.getChildAt(i)
-                                                if (it.targets.contains(v.tag))
-                                                    v.visibility = View.GONE
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                    element.value = parent.getItemAtPosition(position).toString()
+                    //It is unclear how rules will apply to date-time elements but
+                    if (element.hasRules()) {
+                        applyRules(parent.getItemAtPosition(position).toString(), element.rules, views)
                     }
                 }
             }
@@ -263,7 +230,7 @@ private fun addYesNo(context: Context, element: Element, views: LinearLayout) {
     views.addView(spinner)
 }
 
-private fun setTextWatcher(element: Element): TextWatcher {
+private fun setTextWatcher(element: Element, views: LinearLayout): TextWatcher {
     var isDeleting = false
     var isAdded = false
     return object : TextWatcher {
@@ -285,6 +252,8 @@ private fun setTextWatcher(element: Element): TextWatcher {
             } else
                 element.value = s?.toString()!!
             isAdded = false
+            if (element.hasRules())
+                applyRules(element.value, element.rules, views)
         }
 
         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
@@ -298,7 +267,7 @@ private fun setTextWatcher(element: Element): TextWatcher {
     }
 }
 
-private fun pickDate(view: View, element: Element) {
+private fun pickDate(view: View, element: Element, views: LinearLayout) {
     val calendar = Calendar.getInstance()
     val datePickerListener = DatePickerDialog.OnDateSetListener { _, year, monthOfYear, dayOfMonth ->
         calendar.set(Calendar.YEAR, year)
@@ -308,6 +277,8 @@ private fun pickDate(view: View, element: Element) {
         val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
         (view as TextInputEditText).setText(sdf.format(calendar.time))
         element.value = sdf.format(calendar.time)
+        if (element.hasRules())
+            applyRules(element.value, element.rules, views)
     }
     DatePickerDialog(
         view.context, datePickerListener, calendar
@@ -319,7 +290,7 @@ private fun pickDate(view: View, element: Element) {
 }
 
 @SuppressLint("SetTextI18n")
-private fun pickTime(view: View, element: Element) {
+private fun pickTime(view: View, element: Element, views: LinearLayout) {
     val calendar = Calendar.getInstance()
     val hours = calendar.get(Calendar.HOUR_OF_DAY)
     val mins = calendar.get(Calendar.MINUTE)
@@ -327,6 +298,54 @@ private fun pickTime(view: View, element: Element) {
         view.context, TimePickerDialog.OnTimeSetListener { _, hourOfDay, minute ->
             (view as TextInputEditText).setText("$hourOfDay:$mins")
             element.value = "$hourOfDay:$minute"
+            if (element.hasRules())
+                applyRules(element.value, element.rules, views)
         }, hours, mins, false
     ).show()
+}
+
+private fun applyRules(value: String, rules: List<Rule>, views: LinearLayout) {
+    rules.forEach {
+        if (it.condition == "equals") {
+            if (value == it.value) {
+                when (it.action) {
+                    "show" -> {
+                        for (i in 0 until views.childCount) {
+                            val v = views.getChildAt(i)
+                            if (it.targets.contains(v.tag))
+                                v.visibility = View.VISIBLE
+                        }
+                    }
+                    "hide" -> {
+                        for (i in 0 until views.childCount) {
+                            val v = views.getChildAt(i)
+                            if (it.targets.contains(v.tag))
+                                v.visibility = View.GONE
+                        }
+                    }
+                }
+            } else {
+                when (it.otherwise) {
+                    "show" -> {
+                        for (i in 0 until views.childCount) {
+                            val v = views.getChildAt(i)
+                            if (it.targets.contains(v.tag))
+                                v.visibility = View.VISIBLE
+                        }
+                    }
+                    "hide" -> {
+                        for (i in 0 until views.childCount) {
+                            val v = views.getChildAt(i)
+                            if (it.targets.contains(v.tag))
+                                v.visibility = View.GONE
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun Element.hasRules(): Boolean {
+    return this.rules.isNotEmpty()
 }
