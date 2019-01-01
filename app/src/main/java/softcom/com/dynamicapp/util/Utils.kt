@@ -1,16 +1,18 @@
 package softcom.com.dynamicapp.util
 
 import android.content.Context
-import java.text.DecimalFormat
-import java.text.NumberFormat
-import java.util.*
+import android.text.Editable
+import android.util.Log
 
-fun formatNumber(formatString: String, number: Int): String {
-    val formatter = NumberFormat.getInstance(Locale.getDefault())
-    if (formatter is DecimalFormat) {
-        formatter.applyPattern(formatString)
+fun formatNumber(formatString: String, str: Editable) {
+    val editLength = str.length
+    if (editLength < formatString.length) {
+        if (formatString[editLength] != '#')
+            str.append(formatString[editLength])
+        else if (formatString[editLength-1] != '#')
+            str.insert(editLength-1, formatString, editLength-1, editLength)
     }
-    return formatter.format(number)
+    Log.e("Formatter", "Formatted String:$str")
 }
 
 fun convertDp2Px(context: Context, dips: Float): Int {

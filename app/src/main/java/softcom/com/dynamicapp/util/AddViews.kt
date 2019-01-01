@@ -19,6 +19,8 @@ import softcom.com.dynamicapp.data.Section
 import java.text.SimpleDateFormat
 import java.util.*
 
+
+
 fun addViews(context: Context, section: Section, container: LinearLayout) {
     for (element in section.elements) {
         when (element.type) {
@@ -145,7 +147,8 @@ private fun addText(context: Context, element: Element, views: LinearLayout) {
         }
         "formattednumeric" -> {
             view.inputType = InputType.TYPE_CLASS_NUMBER
-            view.addTextChangedListener(setTextWatcher(element))
+
+            view.addTextChangedListener(MaskedWatcher(element.formattedNumeric))
         }
     }
 
@@ -251,9 +254,6 @@ private fun setTextWatcher(element: Element): TextWatcher {
     return object : TextWatcher {
         override fun afterTextChanged(s: Editable?) {
             element.value = s.toString()
-            /*if (element.formattedNumeric.isNotEmpty()) {
-                formatNumber(element.formattedNumeric, s.toString().toInt())
-            }*/
         }
 
         override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {
