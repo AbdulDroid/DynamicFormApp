@@ -62,7 +62,7 @@ class MainActivity : AppCompatActivity() {
             errorView.visibility = View.GONE
             pageCount.visibility = View.VISIBLE
             content.visibility = View.VISIBLE
-            updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size-1)
+            updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size - 1)
             Log.e(TAG, data.toString())
         } else {
             errorView.visibility = View.VISIBLE
@@ -72,16 +72,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateContent(name: String, page: Page, last: Boolean) {
-        pageCount.text = String.format(getString(R.string.page_count), pageNumber+1, data.pages.size)
+        pageCount.text = String.format(getString(R.string.page_count), pageNumber + 1, data.pages.size)
         this.page = page
         this.name = name
         this.last = last
         toolbar?.title = name
         content?.removeAllViews()
         this.last = last
-        for (section in page.sections) {
-            addHeader(this@MainActivity, section.label, content)
-            addViews(this@MainActivity, section, content)
+        page.sections.forEach {
+            addHeader(this@MainActivity, it.label, content)
+            addViews(this@MainActivity, it, content)
         }
         if (last) {
             addButtons(this@MainActivity, true, content, View.OnClickListener {
@@ -104,7 +104,7 @@ class MainActivity : AppCompatActivity() {
             if (pageNumber > data.pages.size - 1) {
                 pageNumber = data.pages.size - 1
             }
-            updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size-1)
+            updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size - 1)
         }
     }
 
@@ -112,10 +112,10 @@ class MainActivity : AppCompatActivity() {
         if (pageNumber > 0 && (data.pages.indexOf(page) != 0)) {
             pageNumber -= 1
             if (pageNumber >= 0)
-                updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size-1)
+                updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size - 1)
             else {
                 pageNumber = 0
-                updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size-1)
+                updateContent(data.name, data.pages[pageNumber], pageNumber == data.pages.size - 1)
             }
         }
     }
@@ -123,29 +123,27 @@ class MainActivity : AppCompatActivity() {
     private fun hideKeyboard() {
         val imm = getSystemService(Activity.INPUT_METHOD_SERVICE) as InputMethodManager
         var view = currentFocus
-        if (view == null) {
-            view = View(this)
-        }
+        if (view == null) view = View(this)
         imm.hideSoftInputFromWindow(view.windowToken, 0)
         view.clearFocus()
     }
 
     private fun validateData(sections: List<Section>): Boolean {
         var checker = false
-        for (section in sections) {
-            for (element in section.elements) {
+        sections.forEach {
+            it.elements.forEach { t ->
                 for (i in 0 until content.childCount) {
                     val view = content.getChildAt(i)
-                    if (view.tag == element.unique_id && element.isMandatory) {
+                    if (view.tag == t.unique_id && t.isMandatory) {
                         if (view is TextInputLayout) {
-                            if (element.value.isEmpty()) {
+                            if (t.value.isEmpty()) {
                                 view.isErrorEnabled = true
                                 view.error = ("This field is mandatory")
                                 view.editText?.requestFocus()
                                 checker = true
                             } else {
-                                if (element.label.equals("Email Address", true)) {
-                                    if(!Patterns.EMAIL_ADDRESS.matcher(element.value).matches()) {
+                                if (t.label.equals("Email Address", true)) {
+                                    if (!Patterns.EMAIL_ADDRESS.matcher(t.value).matches()) {
                                         view.isErrorEnabled = true
                                         view.error = ("Invalid email address")
                                         view.editText?.requestFocus()
@@ -181,10 +179,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun invalidateData() {
-        for (page in data.pages) {
-            for (section in page.sections) {
-                for (element in section.elements) {
-                    element.value = ""
+        data.pages.forEach {
+            it.sections.forEach { s ->
+                s.elements.forEach { e ->
+                    e.value = ""
                 }
             }
         }
