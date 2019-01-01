@@ -33,7 +33,13 @@ class MainActivity : AppCompatActivity() {
             getDataAndShow(loadJSONFromAsset())
         } else {
             onRestoreInstanceState(savedInstanceState)
-            updateContent(name, page, last)
+            if (name.isNotEmpty())
+                updateContent(name, page, last)
+            else {
+                content.visibility = View.GONE
+                pageCount.visibility = View.GONE
+                errorView.visibility = View.VISIBLE
+            }
         }
         restart.setOnClickListener {
             invalidateData()
@@ -209,10 +215,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onRestoreInstanceState(savedInstanceState: Bundle?) {
         super.onRestoreInstanceState(savedInstanceState)
-        this.data = savedInstanceState?.getParcelable("data")!!
-        this.name = savedInstanceState.getString("name")!!
-        this.page = savedInstanceState.getParcelable("page")!!
-        this.last = savedInstanceState.getBoolean("last")
+        if (savedInstanceState?.getParcelable<Data>("data") != null) {
+            this.data = savedInstanceState.getParcelable("data")!!
+            this.name = savedInstanceState.getString("name")!!
+            this.page = savedInstanceState.getParcelable("page")!!
+            this.last = savedInstanceState.getBoolean("last")
+        }
     }
 
 

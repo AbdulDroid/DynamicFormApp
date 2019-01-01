@@ -239,7 +239,7 @@ private fun setTextWatcher(element: Element, views: LinearLayout): TextWatcher {
             if (isDeleting || isAdded)
                 return
             isAdded = true
-            //TODO not that this condition works for cases where the character mask element is '#'
+            //TODO note that this condition works for cases where the character mask element is '#'
             if (element.keyboard == "numeric" && element.formattedNumeric.isNotEmpty()) {
                 val sLength = s?.length!!
                 if (sLength < element.formattedNumeric.length) {
